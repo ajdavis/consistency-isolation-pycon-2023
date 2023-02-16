@@ -13,4 +13,4 @@ def key_handler(key: str):
             abort(404)
     else:
         db[key] = request.get_data()
-        return ''
+        return ""

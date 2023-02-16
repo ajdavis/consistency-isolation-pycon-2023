@@ -1,0 +1,14 @@
+Consistency and Isolation for Python Programmers
+------------------------------------------------
+
+Files related to A. Jesse Jiryu Davis's PyCon 2023 talk.
+
+Run with Python 3.10+. Install packages from requirements.txt.
+
+Run the server like: `python -m flask --app db.py run`
+
+Interact with the server using Curl:
+
+> curl -X PUT -d 'bar' http://127.0.0.1:5000/key/foo
+> curl http://127.0.0.1:5000/key/foo
+bar
