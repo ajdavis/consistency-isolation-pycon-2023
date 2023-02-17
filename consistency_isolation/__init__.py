@@ -10,7 +10,7 @@ class Client:
         self._ensure_connected()
         return self._telnet.read_until("\r\n".encode()).decode().strip()
 
-    def write(self, msg: str) -> None:
+    def send(self, msg: str) -> None:
         self._ensure_connected()
         self._telnet.read_until("db> ".encode())  # Await prompt.
         self._telnet.write(msg.encode() + b"\r\n")
@@ -30,7 +30,7 @@ class Server:
         msg = self._telnet.read_until("\r\n".encode()).decode().strip()
         return msg
 
-    def write(self, msg: str) -> None:
+    def send(self, msg: str) -> None:
         self._telnet.write(msg.encode() + b"\r\n")
 
     def close(self):

@@ -19,6 +19,7 @@ def server_thread(sock: socket.socket, client_addr: tuple[str, int]):
     print(f"{client_addr} connected")
     server = Server(sock)
     server.send(f"Welcome to {__file__}!")
+    txn_writes = {}
     while True:
         try:
             cmd = server.readline()
@@ -29,12 +30,16 @@ def server_thread(sock: socket.socket, client_addr: tuple[str, int]):
             server.send("bye")
             break
         elif match := re.match(r"set (\S+) (\S+)", cmd):
-            db[match.group(1)] = match.group(2)
+            txn_writes[match.group(1)] = match.group(2)
         elif match := re.match(r"get (\S+)", cmd):
+            key = match.group((1))
             try:
-                server.send(db[match.group(1)])
+                server.send(txn_writes[key] if key in txn_writes else db[key])
             except KeyError:
                 server.send("not found")
+        elif cmd == "commit":
+            db.update(txn_writes)
+            txn_writes = {}
         else:
             server.send("invalid syntax")
 

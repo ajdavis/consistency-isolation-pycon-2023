@@ -7,6 +7,7 @@ amount_withdrawn = 0
 key = "jesse-savings"
 tn = Client()
 tn.send(f"set {key} 1")  # I have one dollar in the bank.
+tn.send("commit")
 
 
 def withdraw_1(thread_id):
@@ -18,6 +19,7 @@ def withdraw_1(thread_id):
     if balance >= 1:
         balance -= 1
         local_tn.send(f"set {key} {balance}")
+        local_tn.send("commit")
         print(f"Thread {thread_id} withdrew a dollar")
         with lock:
             amount_withdrawn += 1
