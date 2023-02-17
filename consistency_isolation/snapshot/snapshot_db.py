@@ -19,7 +19,7 @@ def server_thread(sock: socket.socket, client_addr: tuple[str, int]):
     print(f"{client_addr} connected")
     server = Server(sock)
     server.send(f"Welcome to {__file__}!")
-    txn: Database = {}
+    txn = db.copy()  # Create a snapshot.
     while True:
         try:
             cmd = server.readline()
@@ -34,7 +34,6 @@ def server_thread(sock: socket.socket, client_addr: tuple[str, int]):
         elif match := re.match(r"get (\S+)", cmd):
             key = match.group((1))
             try:
-                # Read from local txn or fall back to global DB.
                 server.send(txn[key] if key in txn else db[key])
             except KeyError:
                 server.send("not found")

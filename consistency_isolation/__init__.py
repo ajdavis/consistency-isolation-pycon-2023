@@ -1,5 +1,6 @@
 import socket
 import telnetlib
+import threading
 
 
 class Client:
@@ -36,3 +37,27 @@ class Server:
     def close(self):
         self._telnet.sock.close()
 
+
+class RWLock:
+    def __init__(self):
+        self._read_lock = threading.Lock()
+        self._write_lock = threading.Lock()
+        self._read_count = 0
+
+    def acquire_read(self):
+        with self._read_lock:
+            self._read_count += 1
+            if self._read_count == 1:
+                self._write_lock.acquire()
+
+    def release_read(self):
+        with self._read_lock:
+            self._read_count -= 1
+            if self._read_count == 0:
+                self._write_lock.release()
+
+    def acquire_write(self):
+        self._write_lock.acquire()
+
+    def release_write(self):
+        self._write_lock.release()

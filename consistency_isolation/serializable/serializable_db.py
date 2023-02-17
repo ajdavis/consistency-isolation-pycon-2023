@@ -1,13 +1,15 @@
+import collections
 import re
 import socket
 import threading
 from typing import TypeAlias
 
-from .. import Server
+from .. import RWLock, Server
 
 Database: TypeAlias = dict[str, str]
 
 db: Database = {}
+locks: dict[str, RWLock] = collections.defaultdict(RWLock)
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -19,7 +21,9 @@ def server_thread(sock: socket.socket, client_addr: tuple[str, int]):
     print(f"{client_addr} connected")
     server = Server(sock)
     server.send(f"Welcome to {__file__}!")
-    txn: Database = {}
+    read_locks = set()
+    write_locks = set()
+
     while True:
         try:
             cmd = server.readline()
@@ -30,20 +34,35 @@ def server_thread(sock: socket.socket, client_addr: tuple[str, int]):
             server.send("bye")
             break
         elif match := re.match(r"set (\S+) (\S+)", cmd):
-            txn[match.group(1)] = match.group(2)
+            key = match.group((1))
+            lock = locks[key]
+            if lock not in read_locks.union(write_locks):
+                lock.acquire_write()
+                write_locks.add(lock)
+            db[key] = match.group(2)
         elif match := re.match(r"get (\S+)", cmd):
             key = match.group((1))
+            lock = locks[key]
+            if lock not in read_locks.union(write_locks):
+                lock.acquire_read()
+                read_locks.add(lock)
             try:
-                # Read from local txn or fall back to global DB.
-                server.send(txn[key] if key in txn else db[key])
+                server.send(db[key])
             except KeyError:
+                # Keep the lock to prevent phantoms.
                 server.send("not found")
         elif cmd == "commit":
-            db.update(txn)
-            txn = {}
+            for lock in read_locks:
+                lock.release_read()
+            for lock in write_locks:
+                lock.release_write()
+
+            read_locks = set()
+            write_locks = set()
         else:
             server.send("invalid syntax")
 
+    # TODO: roll back the transaction and drop locks.
     server.close()
 
 
