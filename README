@@ -3,12 +3,20 @@ Consistency and Isolation for Python Programmers
 
 Files related to A. Jesse Jiryu Davis's PyCon 2023 talk.
 
-Run with Python 3.10+. Install packages from requirements.txt.
+Requires Python 3.10+.
 
-Run the server like: `python -m flask --app db.py run`
+Run the server like: `python no_isolation/db.py`.
 
-Interact with the server using Curl:
+Interact with the server using Telnet:
 
-> curl -X PUT -d 'bar' http://127.0.0.1:5000/key/foo
-> curl http://127.0.0.1:5000/key/foo
-bar
+> brew install telnet
+> telnet localhost
+Welcome to /.../consistency-isolation-pycon-2023/no_isolation/db.py!
+db> get foo
+not found
+db> set foo 1
+db> get foo
+1
+db> bye
+bye
+Connection closed by foreign host.
