@@ -19,10 +19,13 @@ def withdraw_1(thread_id):
     if balance >= 1:
         balance -= 1
         local_tn.send(f"set {key} {balance}")
-        local_tn.send("commit")
         print(f"Thread {thread_id} withdrew a dollar")
         with lock:
             amount_withdrawn += 1
+    else:
+        print(f"Thread {thread_id} can't withdraw any money")
+
+    local_tn.send("commit")
 
 
 t1 = threading.Thread(target=withdraw_1, args=[1])
@@ -34,3 +37,4 @@ t2.join()
 print(f"Amount withdrawn: {amount_withdrawn}")
 tn.send(f"get {key}")
 print(f"Amount on server: {tn.readline()}")
+tn.send("commit")

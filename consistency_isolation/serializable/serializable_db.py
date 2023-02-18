@@ -3,13 +3,15 @@ import re
 import socket
 import threading
 from typing import TypeAlias
+from threading import RLock
 
-from .. import RWLock, Server
+from .. import Server
 
 Database: TypeAlias = dict[str, str]
 
 db: Database = {}
-locks: dict[str, RWLock] = collections.defaultdict(RWLock)
+locks: dict[str, RLock] = collections.defaultdict(RLock)
+metalock = threading.Lock()
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -21,8 +23,13 @@ def server_thread(sock: socket.socket, client_addr: tuple[str, int]):
     print(f"{client_addr} connected")
     server = Server(sock)
     server.send(f"Welcome to {__file__}!")
-    read_locks = set()
-    write_locks = set()
+    txn_locks = []
+
+    def acquire_lock(k: str):
+        with metalock:
+            lock = locks[k]
+        lock.acquire()
+        txn_locks.append(lock)
 
     while True:
         try:
@@ -35,34 +42,25 @@ def server_thread(sock: socket.socket, client_addr: tuple[str, int]):
             break
         elif match := re.match(r"set (\S+) (\S+)", cmd):
             key = match.group((1))
-            lock = locks[key]
-            if lock not in read_locks.union(write_locks):
-                lock.acquire_write()
-                write_locks.add(lock)
+            acquire_lock(key)
             db[key] = match.group(2)
         elif match := re.match(r"get (\S+)", cmd):
             key = match.group((1))
-            lock = locks[key]
-            if lock not in read_locks.union(write_locks):
-                lock.acquire_read()
-                read_locks.add(lock)
+            acquire_lock(key)
             try:
                 server.send(db[key])
             except KeyError:
-                # Keep the lock to prevent phantoms.
+                # Keep the RLock to prevent phantoms.
                 server.send("not found")
         elif cmd == "commit":
-            for lock in read_locks:
-                lock.release_read()
-            for lock in write_locks:
-                lock.release_write()
-
-            read_locks = set()
-            write_locks = set()
+            while txn_locks:
+                txn_locks.pop().release()
         else:
             server.send("invalid syntax")
 
     # TODO: roll back the transaction and drop locks.
+    assert not txn_locks
+    print(f"{client_addr} disconnected")
     server.close()
 
 
