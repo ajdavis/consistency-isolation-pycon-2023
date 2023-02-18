@@ -1,9 +1,12 @@
+import dataclasses
+import re
 import socket
 import telnetlib
 import threading
+from collections.abc import Callable
 
 
-class Client:
+class ClientConnection:
     def __init__(self):
         self._telnet: telnetlib.Telnet | None = None
 
@@ -21,43 +24,60 @@ class Client:
             self._telnet = telnetlib.Telnet("localhost")
 
 
-class Server:
+@dataclasses.dataclass
+class Command:
+    name: str
+    key: None | str = None
+    value: None | str = None
+
+
+class ServerConnection:
     def __init__(self, sock: socket.socket):
         self._telnet = telnetlib.Telnet()
         self._telnet.sock = sock
+        self._client_addr = sock.getpeername()
+        print(f"{self._client_addr} connected")
+        self.send(f"Welcome to {__file__}!")
 
-    def readline(self) -> str:
-        self._telnet.write("db> ".encode())
-        msg = self._telnet.read_until("\r\n".encode()).decode().strip()
-        return msg
+    def readline(self) -> str | None:
+        try:
+            self._telnet.write("db> ".encode())
+            return self._telnet.read_until("\r\n".encode()).decode().strip()
+        except (EOFError, ConnectionResetError):
+            print(f"{self._client_addr} disconnected")
+            self._telnet.sock.close()
+            return None
+
+    def next_command(self) -> Command | None:
+        while True:
+            msg = self.readline()
+            if msg is None:
+                return None
+            elif msg in ("commit", "bye"):
+                return Command(msg)
+            elif match := re.match(
+                r"(?P<name>get|set)\s+(?P<key>\S+)(\s+(?P<value>\S+))?",
+                msg):
+                return Command(**match.groupdict())
+
+            self.send("invalid syntax")
+            # Loop around and try again.
 
     def send(self, msg: str) -> None:
         self._telnet.write(msg.encode() + b"\r\n")
 
-    def close(self):
-        self._telnet.sock.close()
 
-
-class RWLock:
+class Server:
     def __init__(self):
-        self._read_lock = threading.Lock()
-        self._write_lock = threading.Lock()
-        self._read_count = 0
+        self._sock: socket.socket | None = None
 
-    def acquire_read(self):
-        with self._read_lock:
-            self._read_count += 1
-            if self._read_count == 1:
-                self._write_lock.acquire()
+    def serve(self, worker_fn: Callable[[ServerConnection], None]):
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._sock.bind(('', 23), )
+        self._sock.listen(1)
 
-    def release_read(self):
-        with self._read_lock:
-            self._read_count -= 1
-            if self._read_count == 0:
-                self._write_lock.release()
-
-    def acquire_write(self):
-        self._write_lock.acquire()
-
-    def release_write(self):
-        self._write_lock.release()
+        while True:
+            sock, addr = self._sock.accept()
+            server = ServerConnection(sock)
+            threading.Thread(target=worker_fn, args=(server,)).start()

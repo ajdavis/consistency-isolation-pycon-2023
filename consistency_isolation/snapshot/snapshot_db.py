@@ -1,51 +1,28 @@
-import re
-import socket
-import threading
-from typing import TypeAlias
+from .. import Server, ServerConnection
 
-from .. import Server
-
-Database: TypeAlias = dict[str, str]
-
-db: Database = {}
-
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-server_socket.bind(('', 23), )
-server_socket.listen(1)
+db: dict[str, str] = {}
 
 
-def server_thread(sock: socket.socket, client_addr: tuple[str, int]):
-    print(f"{client_addr} connected")
-    server = Server(sock)
-    server.send(f"Welcome to {__file__}!")
+def server_thread(server: ServerConnection):
     txn = db.copy()  # Create a snapshot.
     while True:
-        try:
-            cmd = server.readline()
-        except (EOFError, ConnectionResetError):
-            break  # Disconnected.
-
-        if cmd == "bye":
+        cmd = server.next_command()
+        if cmd is None:
+            break
+        elif cmd.name == "bye":
             server.send("bye")
             break
-        elif match := re.match(r"set (\S+) (\S+)", cmd):
-            txn[match.group(1)] = match.group(2)
-        elif match := re.match(r"get (\S+)", cmd):
-            key = match.group((1))
+        elif cmd.name == "set":
+            # Store writes in txn dict.
+            txn[cmd.key] = cmd.value
+        elif cmd.name == "get":
             try:
-                server.send(txn[key] if key in txn else db[key])
+                server.send(txn[cmd.key])
             except KeyError:
                 server.send("not found")
-        elif cmd == "commit":
+        elif cmd.name == "commit":
             db.update(txn)
-            txn = {}
-        else:
-            server.send("invalid syntax")
-
-    server.close()
+            txn = db.copy()
 
 
-while True:
-    sock, addr = server_socket.accept()
-    threading.Thread(target=server_thread, args=(sock, addr)).start()
+Server().serve(server_thread)
