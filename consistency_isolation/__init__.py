@@ -1,6 +1,8 @@
 import dataclasses
+import os.path
 import re
 import socket
+import sys
 import telnetlib
 import threading
 from collections.abc import Callable
@@ -37,7 +39,9 @@ class ServerConnection:
         self._telnet.sock = sock
         self._client_addr = sock.getpeername()
         print(f"{self._client_addr} connected")
-        self.send(f"Welcome to {__file__}!")
+        program = f"{os.path.basename(os.path.dirname(sys.argv[0]))}" \
+                  f"/{os.path.basename(sys.argv[0])}"
+        self.send(f"Welcome to {program}!\nType 'bye' to quit.")
 
     def readline(self) -> str | None:
         try:

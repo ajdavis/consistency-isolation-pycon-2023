@@ -12,7 +12,11 @@ Interact with the server using Telnet:
 
 > brew install telnet
 > telnet localhost
-Welcome to /.../consistency-isolation-pycon-2023/no_isolation/db.py!
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+Welcome to no_isolation/db.py!
+Type 'bye' to quit.
 db> get foo
 not found
 db> set foo 1
