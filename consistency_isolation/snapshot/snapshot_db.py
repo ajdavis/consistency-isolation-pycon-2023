@@ -8,10 +8,9 @@ def server_thread(server: ServerConnection):
     while True:
         cmd = server.next_command()
         if cmd is None:
-            break
+            break  # Disconnected.
         elif cmd.name == "bye":
-            server.send("bye")
-            break
+            server.send("bye"); break
         elif cmd.name == "set":
             # Store writes in txn dict.
             txn[cmd.key] = cmd.value
