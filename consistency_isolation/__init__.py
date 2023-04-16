@@ -70,6 +70,9 @@ class ServerConnection:
     def send(self, msg: str) -> None:
         self._telnet.write(msg.encode() + b"\r\n")
 
+    def close(self):
+        self._telnet.sock.close()
+
 
 class Server:
     def __init__(self):
@@ -84,4 +87,11 @@ class Server:
         while True:
             sock, addr = self._sock.accept()
             server = ServerConnection(sock)
-            threading.Thread(target=worker_fn, args=(server,)).start()
+
+            def work_then_close(sc: ServerConnection):
+                try:
+                    worker_fn(sc)
+                finally:
+                    sc.close()
+
+            threading.Thread(target=work_then_close, args=(server,)).start()
