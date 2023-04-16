@@ -1,10 +1,14 @@
+import threading
+
 from .. import Server, ServerConnection
 
 db: dict[str, str] = {}
-
+lock = threading.Lock()
 
 def server_thread(server: ServerConnection):
-    txn = db.copy()  # Create a snapshot.
+    with lock:
+        txn = db.copy()  # Create a snapshot.
+
     while True:
         cmd = server.next_command()
         if cmd is None or cmd.name == "bye":
@@ -18,8 +22,9 @@ def server_thread(server: ServerConnection):
             except KeyError:
                 server.send("not found")
         elif cmd.name == "commit":
-            db.update(txn)
-            txn = db.copy()
+            with lock:
+                db.update(txn)
+                txn = db.copy()
 
 
 Server().serve(server_thread)
