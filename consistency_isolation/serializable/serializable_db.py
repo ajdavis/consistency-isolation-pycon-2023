@@ -17,10 +17,8 @@ def server_thread(server: ServerConnection):
 
     while True:
         cmd = server.next_command()
-        if cmd is None:
-            break  # Disconnected.
-        elif cmd.name == "bye":
-            server.send("bye"); break
+        if cmd is None or cmd.name == "bye":
+            break
         elif cmd.name == "set":
             acquire_lock(cmd.key)
             db[cmd.key] = cmd.value

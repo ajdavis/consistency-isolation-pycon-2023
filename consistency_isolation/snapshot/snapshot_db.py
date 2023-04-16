@@ -7,10 +7,8 @@ def server_thread(server: ServerConnection):
     txn = db.copy()  # Create a snapshot.
     while True:
         cmd = server.next_command()
-        if cmd is None:
-            break  # Disconnected.
-        elif cmd.name == "bye":
-            server.send("bye"); break
+        if cmd is None or cmd.name == "bye":
+            break
         elif cmd.name == "set":
             # Store writes in txn dict.
             txn[cmd.key] = cmd.value

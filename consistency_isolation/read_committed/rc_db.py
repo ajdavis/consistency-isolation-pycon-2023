@@ -6,21 +6,17 @@ from .. import Server, ServerConnection
 db: dict[str, str] = {}
 locks: dict[str, RLock] = collections.defaultdict(RLock)
 
-
 def server_thread(server: ServerConnection):
     txn_locks = []
 
     def acquire_lock(k: str):
-        lock = locks[k]
-        lock.acquire()
+        lock = locks[k]; lock.acquire()
         txn_locks.append(lock)
 
     while True:
         cmd = server.next_command()
-        if cmd is None:
-            break  # Disconnected.
-        elif cmd.name == "bye":
-            server.send("bye"); break
+        if cmd is None or cmd.name == "bye":
+            break
         elif cmd.name == "set":
             acquire_lock(cmd.key)
             db[cmd.key] = cmd.value
@@ -28,7 +24,6 @@ def server_thread(server: ServerConnection):
             key = cmd.key
             with locks[key]:
                 try:
-                    # Read from local txn or fall back to global DB.
                     server.send(db[key])
                 except KeyError:
                     server.send("not found")

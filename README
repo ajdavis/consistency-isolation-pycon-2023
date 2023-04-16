@@ -23,5 +23,4 @@ db> set foo 1
 db> get foo
 1
 db> bye
-bye
 Connection closed by foreign host.
