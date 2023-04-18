@@ -3,7 +3,7 @@ Consistency and Isolation for Python Programmers
 
 Files related to A. Jesse Jiryu Davis's PyCon 2023 talk.
 
-Requires Python 3.10+ and the packages in requirements.txt.
+Requires Python 3.10+.
 
 Run the server like: `python no_isolation/db.py`. (Substitute whichever variant of the server you
 want to run.)
