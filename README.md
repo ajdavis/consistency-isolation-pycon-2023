@@ -8,7 +8,7 @@ Run the server like: `python no_isolation/db.py`. (Substitute whichever variant 
 want to run.)
 
 Interact with the server using Telnet:
-
+```
 > brew install telnet
 > telnet localhost
 Trying 127.0.0.1...
@@ -23,3 +23,4 @@ db> get foo
 1
 db> bye
 Connection closed by foreign host.
+```
