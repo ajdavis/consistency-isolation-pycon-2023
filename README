@@ -1,7 +1,7 @@
 Consistency and Isolation for Python Programmers
 ------------------------------------------------
 
-Files related to A. Jesse Jiryu Davis's PyCon 2023 talk.
+Files related to A. Jesse Jiryu Davis's PyCon 2023 talk. [Blog post with links to video and a podcast interview](https://emptysqua.re/blog/pycon-2023-consistency-isolation/).
 
 Requires Python 3.10+.
 
